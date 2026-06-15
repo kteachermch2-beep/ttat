@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나의 학교 생활</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; min-height: 100vh; padding: 20px; }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  h2 { font-size: 20px; font-weight: 600; color: #1a1a1a; margin-bottom: 2px; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 16px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #e5e5e5; padding-bottom: 10px; }
+  .tab { padding: 6px 16px; border-radius: 8px; border: 1px solid #ddd; background: transparent; font-size: 13px; color: #666; cursor: pointer; transition: all .15s; }
+  .tab.active { background: #dbeafe; color: #1e40af; border-color: #93c5fd; font-weight: 600; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* 시간표 */
+  .hint { font-size: 12px; color: #aaa; margin-bottom: 8px; }
+  .tt-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: separate; border-spacing: 4px; }
+  th { font-size: 13px; font-weight: 500; color: #666; text-align: center; padding: 4px 0; }
+  th.today-h { color: #1d4ed8; font-weight: 700; }
+  .period-cell { text-align: center; width: 38px; }
+  .period-num { font-size: 12px; font-weight: 600; color: #555; }
+  .period-time { font-size: 10px; color: #bbb; }
+  .subj { border-radius: 6px; padding: 8px 4px; text-align: center; font-size: 12px; min-height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: opacity .1s; }
+  .subj:hover { opacity: .8; }
+  .subj.empty { background: #f5f5f3; color: #ccc; border: 1px dashed #ddd; }
+  .subj-input { width: 100%; padding: 6px 4px; font-size: 12px; text-align: center; border-radius: 6px; border: 1.5px solid #3b82f6; outline: none; min-height: 38px; }
+
+  /* 오늘 수업 */
+  .today-list { display: flex; flex-direction: column; gap: 8px; }
+  .today-card { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 12px 16px; }
+  .today-card .p-num { min-width: 36px; text-align: center; }
+  .today-card .p-num b { font-size: 20px; color: #1a1a1a; }
+  .today-card .p-num span { display: block; font-size: 10px; color: #bbb; }
+  .subj-badge { display: inline-block; font-size: 14px; font-weight: 600; padding: 2px 12px; border-radius: 5px; }
+  .p-time { font-size: 11px; color: #aaa; margin-top: 2px; }
+  .empty-msg { text-align: center; padding: 2rem 0; color: #aaa; font-size: 14px; }
+
+  /* 할 일 */
+  .add-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .add-row input { flex: 1; padding: 9px 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 14px; outline: none; }
+  .add-row input:focus { border-color: #3b82f6; }
+  .add-row select { padding: 9px 8px; border-radius: 8px; border: 1px solid #ddd; font-size: 13px; color: #555; outline: none; }
+  .add-btn { padding: 9px 16px; border-radius: 8px; border: 1px solid #93c5fd; background: #dbeafe; color: #1e40af; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .todo-group { margin-bottom: 14px; }
+  .group-label { font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .todo-item { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 10px 14px; margin-bottom: 5px; }
+  .todo-item.done { opacity: .45; }
+  .todo-item input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: #10b981; flex-shrink: 0; }
+  .todo-text { flex: 1; font-size: 14px; color: #222; }
+  .todo-item.done .todo-text { text-decoration: line-through; }
+  .del-btn { background: none; border: none; cursor: pointer; color: #ccc; font-size: 16px; line-height: 1; padding: 2px 4px; }
+  .del-btn:hover { color: #e74c3c; }
+  .badge-count { background: #fee2e2; color: #b91c1c; font-size: 11px; border-radius: 99px; padding: 1px 7px; margin-left: 5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>📅 나의 학교 생활</h2>
+  <div class="subtitle" id="dateInfo"></div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('timetable')">시간표</button>
+    <button class="tab" onclick="switchTab('today')">오늘 수업</button>
+    <button class="tab" id="todoTab" onclick="switchTab('todo')">할 일</button>
+  </div>
+
+  <!-- 시간표 -->
+  <div class="panel active" id="panel-timetable">
+    <div class="hint">📝 과목을 클릭하면 수정할 수 있어요</div>
+    <div class="tt-wrap">
+      <table id="tt"></table>
+    </div>
+  </div>
+
+  <!-- 오늘 수업 -->
+  <div class="panel" id="panel-today">
+    <div class="today-list" id="todayList"></div>
+  </div>
+
+  <!-- 할 일 -->
+  <div class="panel" id="panel-todo">
+    <div class="add-row">
+      <input type="text" id="todoInput" placeholder="할 일 입력..." onkeydown="if(event.key==='Enter')addTodo()">
+      <select id="dueSelect">
+        <option>오늘</option><option>내일</option><option>이번 주</option><option>다음 주</option>
+      </select>
+      <button class="add-btn" onclick="addTodo()">+ 추가</button>
+    </div>
+    <div id="todoList"></div>
+  </div>
+</div>
+
+<script>
+const DAYS = ["월","화","수","목","금"];
+const PERIODS = [1,2,3,4,5,6,7];
+const TIMES = ["09:00","10:00","11:00","12:00","13:50","14:50","15:50"];
+const DAY_KOR = ["일","월","화","수","목","금","토"];
+
+const COLORS = {
+  "국어":  {bg:"#FAECE7",text:"#712B13",bd:"#F0997B"},
+  "수학":  {bg:"#DBEAFE",text:"#1e3a8a",bd:"#93c5fd"},
+  "영어":  {bg:"#EDE9FE",text:"#3730a3",bd:"#a5b4fc"},
+  "과학":  {bg:"#DCFCE7",text:"#14532d",bd:"#86efac"},
+  "사회":  {bg:"#FEF9C3",text:"#713f12",bd:"#fde047"},
+  "음악":  {bg:"#FCE7F3",text:"#831843",bd:"#f9a8d4"},
+  "미술":  {bg:"#D1FAE5",text:"#064e3b",bd:"#6ee7b7"},
+  "체육":  {bg:"#FEE2E2",text:"#7f1d1d",bd:"#fca5a5"},
+  "도덕":  {bg:"#F3F4F6",text:"#374151",bd:"#d1d5db"},
+  "실과":  {bg:"#FEF3C7",text:"#78350f",bd:"#fcd34d"},
+  "창체":  {bg:"#CFFAFE",text:"#164e63",bd:"#67e8f9"},
+};
+const defC = {bg:"#F3F4F6",text:"#374151",bd:"#d1d5db"};
+const getC = s => COLORS[s] || defC;
+
+let timetable = {
+  "월-1":"국어","월-2":"수학","월-3":"영어","월-4":"사회","월-5":"과학","월-6":"체육",
+  "화-1":"수학","화-2":"국어","화-3":"사회","화-4":"영어","화-5":"음악","화-6":"미술",
+  "수-1":"국어","수-2":"과학","수-3":"수학","수-4":"체육","수-5":"도덕","수-6":"실과",
+  "목-1":"영어","목-2":"국어","목-3":"수학","목-4":"사회","목-5":"창체","목-6":"창체",
+  "금-1":"수학","금-2":"영어","금-3":"과학","금-4":"국어","금-5":"미술","금-6":"음악",
+};
+let todos = [
+  {id:1,text:"수학 교과서 p.34 풀기",done:false,due:"오늘"},
+  {id:2,text:"국어 일기 쓰기",done:false,due:"내일"},
+  {id:3,text:"체육복 챙기기",done:true,due:"오늘"},
+];
+let editingKey = null;
+
+const today = new Date();
+const todayKor = DAY_KOR[today.getDay()];
+const isWeekday = today.getDay()>=1 && today.getDay()<=5;
+
+document.getElementById("dateInfo").textContent =
+  `${today.getMonth()+1}월 ${today.getDate()}일 (${todayKor}) · 할 일 ${todos.filter(t=>!t.done).length}개 남음`;
+
+function switchTab(name) {
+  document.querySelectorAll(".tab").forEach((t,i)=>{
+    t.classList.toggle("active", ["timetable","today","todo"][i]===name);
+  });
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+  document.getElementById("panel-"+name).classList.add("active");
+}
+
+function buildTimetable() {
+  const tt = document.getElementById("tt");
+  let html = "<thead><tr><th></th>";
+  DAYS.forEach(d=>{
+    const isT = d===todayKor;
+    html += `<th class="${isT?'today-h':''}">${d}${isT?" ★":""}</th>`;
+  });
+  html += "</tr></thead><tbody>";
+  PERIODS.forEach(p=>{
+    html += `<tr><td class="period-cell"><div class="period-num">${p}</div><div class="period-time">${TIMES[p-1]}</div></td>`;
+    DAYS.forEach(d=>{
+      const key=`${d}-${p}`, subj=timetable[key]||"";
+      html += `<td>${renderCell(key,subj)}</td>`;
+    });
+    html += "</tr>";
+  });
+  html += "</tbody>";
+  tt.innerHTML = html;
+}
+
+function renderCell(key, subj) {
+  if(editingKey===key) {
+    return `<input class="subj-input" id="inp_${key}" value="${subj}" onblur="saveEdit('${key}')" onkeydown="if(event.key==='Enter')saveEdit('${key}')">`;
+  }
+  if(!subj) return `<div class="subj empty" onclick="startEdit('${key}','')">+</div>`;
+  const c = getC(subj);
+  const isT = key.startsWith(todayKor+"-");
+  return `<div class="subj" style="background:${c.bg};color:${c.text};border:${isT?`2px solid ${c.bd}`:`1px solid ${c.bd}`};font-weight:${isT?600:400}" onclick="startEdit('${key}','${subj}')">${subj}</div>`;
+}
+
+function startEdit(key, val) {
+  editingKey = key;
+  buildTimetable();
+  const inp = document.getElementById("inp_"+key);
+  if(inp){ inp.focus(); inp.select(); }
+}
+
+function saveEdit(key) {
+  const inp = document.getElementById("inp_"+key);
+  if(inp) timetable[key] = inp.value.trim();
+  editingKey = null;
+  buildTimetable();
+}
+
+function buildToday() {
+  const el = document.getElementById("todayList");
+  if(!isWeekday){ el.innerHTML=`<div class="empty-msg">오늘은 주말이에요 🎉 푹 쉬세요!</div>`; return; }
+  const classes = PERIODS.map(p=>({p, s:timetable[`${todayKor}-${p}`]||""})).filter(c=>c.s);
+  if(!classes.length){ el.innerHTML=`<div class="empty-msg">오늘 수업이 없어요.<br>시간표 탭에서 추가해 보세요!</div>`; return; }
+  el.innerHTML = classes.map(({p,s})=>{
+    const c=getC(s);
+    return `<div class="today-card" style="border-left:4px solid ${c.bd}">
+      <div class="p-num"><b>${p}</b><span>교시</span></div>
+      <div>
+        <div class="subj-badge" style="background:${c.bg};color:${c.text}">${s}</div>
+        <div class="p-time">${TIMES[p-1]} 시작</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function updateTodoTab() {
+  const pending = todos.filter(t=>!t.done).length;
+  document.getElementById("todoTab").innerHTML = `할 일 <span class="badge-count">${pending}</span>`;
+  document.getElementById("dateInfo").textContent =
+    `${today.getMonth()+1}월 ${today.getDate()}일 (${todayKor}) · 할 일 ${pending}개 남음`;
+}
+
+function buildTodos() {
+  const el = document.getElementById("todoList");
+  const groups = ["오늘","내일","이번 주","다음 주"];
+  let html = "";
+  groups.forEach(g=>{
+    const items = todos.filter(t=>t.due===g);
+    if(!items.length) return;
+    html += `<div class="todo-group"><div class="group-label">${g}</div>`;
+    items.forEach(t=>{
+      html += `<div class="todo-item${t.done?" done":""}">
+        <input type="checkbox" ${t.done?"checked":""} onchange="toggleTodo(${t.id})">
+        <span class="todo-text">${t.text}</span>
+        <button class="del-btn" onclick="deleteTodo(${t.id})">✕</button>
+      </div>`;
+    });
+    html += "</div>";
+  });
+  if(!todos.length) html = `<div class="empty-msg">할 일이 없어요 ✅</div>`;
+  el.innerHTML = html;
+  updateTodoTab();
+}
+
+function addTodo() {
+  const text = document.getElementById("todoInput").value.trim();
+  if(!text) return;
+  const due = document.getElementById("dueSelect").value;
+  todos.push({id:Date.now(), text, done:false, due});
+  document.getElementById("todoInput").value = "";
+  buildTodos();
+}
+
+function toggleTodo(id) {
+  todos = todos.map(t=>t.id===id?{...t,done:!t.done}:t);
+  buildTodos();
+}
+
+function deleteTodo(id) {
+  todos = todos.filter(t=>t.id!==id);
+  buildTodos();
+}
+
+buildTimetable();
+buildToday();
+buildTodos();
+</script>
+</body>
+</html>
